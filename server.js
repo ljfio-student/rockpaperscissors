@@ -148,14 +148,14 @@ server.on('connection', function (socket) {
 
   if(user_space.length > 0) {
     socket.id = user_space.pop();
-  } else if(users.length >= user_limit) {
+  } else if(users.length < user_limit) {
+    socket.id = user_count;
+    user_count++;
+  } else {
     sendClient(socket, {
       action: actions.MAX_USERS
     });
     socket.close();
-  } else {
-    socket.id = user_count;
-    user_count++;
   }
   
   if(socket.id >= 0) {
