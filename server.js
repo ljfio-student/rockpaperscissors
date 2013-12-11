@@ -74,7 +74,7 @@ var httpServer = http.createServer(function(req, res){
     res.write(args.content);
     res.end();
   });
-}).listen(80);
+}).listen(process.env.OPENSHIFT_NODEJS_PORT, process.env.OPENSHIFT_NODEJS_IP);
 
 // Game server
 var games = [];
