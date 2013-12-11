@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Paper, Scissors &amp; Stone</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.2/cyborg/bootstrap.min.css" />
+    <script type="text/javascript" src="//code.jquery.com/jquery-1.10.1.min.js"></script>
+    <script type="text/javascript" src="//netdna.bootstrapcdn.com/bootstrap/3.0.3/js/bootstrap.min.js"></script>
+    <script type="text/javascript" src="/engine.io.js"></script>
+    <script type="text/javascript" src="/main.js"></script>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Paper, Scissors &amp; Stone</h1>
+      <div class="row">
+        <div id="wscores" class="col-sm-3 hidden">
+          <p>
+            <h3>Your Score: <span id="user-score">0</span></h3>
+            <h3>Their Score: <span id="other-score">0</span></h3>
+            <br /><br />
+          </p>
+        </div>
+        <div class="col-sm-9">
+          <div id="winterval"><h3>The one and only multiplayer Paper, Scissors &amp; Stone, built on HTML5</h3></div>
+          <div id="wstart"><button class="btn btn-success">Click me to play!</button></div>
+          <div class="hidden" id="wagain"><button class="btn btn-warning">Play Again?</button></div>
+          <div class="hidden" id="wgame">
+            <h2>Select Your Weapon!</h2>
+            <div class="row" id="wselect">
+              <div class="col-sm-4">
+                <div class="thumbnail">
+                  <!--<img src="/img/paper.gif" alt="Paper">-->
+                  <div class="caption">
+                    <h3>Paper</h3>
+                    <p>White, blue, yellow, red, multcoloured. The simple sheet you once wrote on is now your enemies worst nightmare.</p>
+                    <p class="pull-right"><button class="btn btn-primary" data-val=1>Select</button></p>
+                    <div class="clearfix"></div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-sm-4">
+                <div class="thumbnail">
+                  <!--<img src="/img/scissors.gif" alt="Scissors">-->
+                  <div class="caption">
+                    <h3>Scissors</h3>
+                    <p>Slice your way to victory with this little snipper of a weapon. Comes in metal and plastic variants, with a multitude of coloured handles.</p>
+                    <p class="pull-right"><button class="btn btn-primary" data-val=2>Select</button></p>
+                    <div class="clearfix"></div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-sm-4">
+                <div class="thumbnail">
+                  <!--<img src="/img/stone.gif" alt="Stone">-->
+                  <div class="caption">
+                    <h3>Stone</h3>
+                    <p>Not all weapons have to be man made. Crush your opponents with this nature's solid death bringer.</p>
+                    <p class="pull-right"><button class="btn btn-primary" data-val=3>Select</button></p>
+                    <div class="clearfix"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
