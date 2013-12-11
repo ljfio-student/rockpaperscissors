@@ -25,6 +25,7 @@ $(document).ready(function(){
   function connectServer() {
     var loc = location.hostname;
       socket = eio(location.protocol == "http:" ? "ws://" : "wss://" + loc, {
+        upgrade: false,
         transports: ['polling']
       });
       socket.onopen = function(){
