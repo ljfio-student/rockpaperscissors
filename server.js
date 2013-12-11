@@ -74,7 +74,7 @@ var httpServer = http.createServer(function(req, res){
     res.write(args.content);
     res.end();
   });
-}).listen(process.env.PORT, process.env.IP);
+}).listen(80);
 
 // Game server
 var games = [];
