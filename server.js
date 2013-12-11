@@ -391,3 +391,5 @@ async.forever(function(callback){
 }, function(err){
   console.log("dead-err:" + err);
 });
+
+console.log("Server Started");
