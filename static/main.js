@@ -24,7 +24,10 @@ $(document).ready(function(){
 
   function connectServer() {
     var loc = location.hostname;
-      socket = eio((location.protocol == "http:" ? "ws://" : "wss://") + loc);
+      socket = eio((location.protocol == "http:" ? "ws://" : "wss://") + loc, {
+        upgrade: false,
+        transports: ['polling']
+      });
       socket.onopen = function(){
         socket.onmessage = function(data){
           var obj = JSON.parse(data);
