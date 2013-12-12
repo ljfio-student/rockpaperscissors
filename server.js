@@ -126,7 +126,9 @@ function checkWinner(one, two) {
 }
 
 // Initialise the server
-var server = engine.attach(httpServer);
+var server = engine.attach(httpServer, {
+  transports: ['polling']
+});
 server.on('connection', function (socket) {
   socket.id = -1;
 
