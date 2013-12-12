@@ -126,7 +126,7 @@ function checkWinner(one, two) {
 }
 
 // Initialise the server
-var server = engine.attach(httpServer);
+var server = engine.listen(8000);
 server.on('connection', function (socket) {
   socket.id = -1;
 
