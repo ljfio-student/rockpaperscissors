@@ -1,6 +1,6 @@
 // HTTP Server
 var fs = require('fs');
-var mo = require('./mo');
+var mo = require('mustache');
 var http = require("http");
 var url = require('url');
 var engine = require('engine.io')
@@ -24,7 +24,7 @@ var httpServer = http.createServer(function(req, res){
     {path: "/", render: "static/index.html", type:"text/html"},
     {path: "/engine.io.js", file: "static/engine.io.js", type: "text/javascript"},
     {path: "/main.js", file: "static/main.js", type: "text/javascript"},
-    
+
     {path: "/img/scissors.gif", file: "static/350x350.gif", type:"image/gif"},
     {path: "/img/paper.gif", file: "static/350x350.gif", type:"image/gif"},
     {path: "/img/stone.gif", file: "static/350x350.gif", type:"image/gif"}
@@ -54,7 +54,7 @@ var httpServer = http.createServer(function(req, res){
           args.content = mo.render(fs.readFileSync(files[i].render, 'utf8'), a);
         else
           args.content = fs.readFileSync(files[i].file);
-        
+
         args.status = 200;
         args.set = true;
 
@@ -74,7 +74,7 @@ var httpServer = http.createServer(function(req, res){
     res.write(args.content);
     res.end();
   });
-}).listen(process.env.OPENSHIFT_NODEJS_PORT, process.env.OPENSHIFT_NODEJS_IP);
+}).listen(process.env.OPENSHIFT_NODEJS_PORT || 3000, process.env.OPENSHIFT_NODEJS_IP || '127.0.0.1');
 
 // Game server
 var games = [];
@@ -159,11 +159,11 @@ server.on('connection', function (socket) {
     });
     socket.close();
   }
-  
+
   if(socket.id >= 0) {
     users.push(socket);
   }
-  
+
   socket.old_id = socket.id;
 });
 
@@ -190,7 +190,7 @@ async.forever(function(callback){
             times: 0
           });
           games_count++;
-          
+
           updates_out.push({
             to: [opp, u.id],
             action: actions.GAME_START
@@ -255,7 +255,7 @@ async.forever(function(callback){
                 }
               });
             }
-            
+
             console.log("game: " + JSON.stringify(games[g]));
           } else {
             // Invalid choice
@@ -266,7 +266,7 @@ async.forever(function(callback){
       case actions.PLAY_AGAIN:
         for(var g in games){
           var game_up = false;
-          
+
           if(games[g].one == u.id) {
             games[g].r_one = true;
             game_up = true;
@@ -274,14 +274,14 @@ async.forever(function(callback){
             games[g].r_two = true;
             game_up = true;
           }
-          
+
           if(game_up) {
             if(games[g].r_one && games[g].r_two) {
               updates_out.push({
                 to: [games[g].one, games[g].two],
                 action: actions.GAME_START
               });
-              
+
               // Reset ready state
               games[g].r_one = false;
               games[g].r_two = false;
@@ -347,7 +347,7 @@ async.forever(function(callback){
     if(users[x].id == -2) {
       for(var g in games){
         var user_disconnect = false;
-        
+
         if(games[g].one == users[x].old_id) {
           updates_out.push({
             to: games[g].two,
@@ -361,29 +361,29 @@ async.forever(function(callback){
           });
           user_disconnect = true;
         }
-        
+
         if(user_disconnect) {
           if(!fs.exists('games.csv')) {
             fs.writeFileSync('games.csv', "id,one,two,times\n");
           }
-          
+
           fs.appendFileSync('games.csv',
             games[g].id + "," +
             games[g].s_one + "," +
             games[g].s_two + "," +
             games[g].times + '\n'
           );
-          
+
           games.splice(g, 1);
         }
       }
-      
+
       for(var l in lobby) {
         if(users[x].old_id == lobby[l]) {
           lobby.splice(l, 1);
         }
       }
-      
+
       user_space.push(users[x].old_id);
       users.splice(x, 1);
     }
