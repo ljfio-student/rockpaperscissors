@@ -2,8 +2,9 @@
 var fs = require('fs');
 var mo = require('mustache');
 var http = require("http");
+var httpServer = http.createServer(httpHandler);
 var url = require('url');
-var engine = require('engine.io')
+var server = require('socket.io')(httpServer);
 var async = require("async");
 
 // Calculate size of an object
@@ -16,13 +17,12 @@ Object.size = function(obj) {
 };
 
 // Web server
-var httpServer = http.createServer(function(req, res){
+function httpHandler(req, res) {
   var uri = url.parse(req.url, true);
   var data = "";
 
   var files = [
     {path: "/", render: "static/index.html", type:"text/html"},
-    {path: "/engine.io.js", file: "static/engine.io.js", type: "text/javascript"},
     {path: "/main.js", file: "static/main.js", type: "text/javascript"},
 
     {path: "/img/scissors.gif", file: "static/350x350.gif", type:"image/gif"},
@@ -74,7 +74,9 @@ var httpServer = http.createServer(function(req, res){
     res.write(args.content);
     res.end();
   });
-}).listen(process.env.OPENSHIFT_NODEJS_PORT || 3000, process.env.OPENSHIFT_NODEJS_IP || '127.0.0.1');
+}
+
+httpServer.listen(process.env.OPENSHIFT_NODEJS_PORT || 3000, process.env.OPENSHIFT_NODEJS_IP || '127.0.0.1');
 
 // Game server
 var games = [];
@@ -126,9 +128,6 @@ function checkWinner(one, two) {
 }
 
 // Initialise the server
-var server = engine.attach(httpServer, {
-  transports: ['polling']
-});
 server.on('connection', function (socket) {
   socket.id = -1;
 

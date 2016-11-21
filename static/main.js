@@ -23,13 +23,10 @@ $(document).ready(function(){
   }
 
   function connectServer() {
-    var loc = location.hostname;
-      socket = eio((location.protocol == "http:" ? "ws://" : "wss://") + loc, {
-        upgrade: false,
-        transports: ['polling']
-      });
-      socket.onopen = function(){
-        socket.onmessage = function(data){
+      socket = io(location.origin);
+
+      socket.on('connect',  function() {
+        socket.on('message',function(data){
           var obj = JSON.parse(data);
 
           console.log(data);
@@ -58,7 +55,7 @@ $(document).ready(function(){
                 r = "Won";
               else if(obj.value.lost)
                 r = "Lost";
-                
+
               $("#user-score").html(obj.value.scores.you);
               $("#other-score").html(obj.value.scores.opp);
 
@@ -70,11 +67,11 @@ $(document).ready(function(){
               $("#wgame").addClass("hidden");
               $("#wscores").addClass("hidden");
               $("#wagain").addClass("hidden");
-              
+
               $("#user-score").html(0);
               $("#other-score").html(0);
               $("#winterval").html("<h4>Other user disconnected, fight abandoned!</h4>");
-              
+
               $("#wstart").removeClass("hidden");
               $("#winterval").removeClass("hidden");
               break;
@@ -82,32 +79,32 @@ $(document).ready(function(){
               $("#wgame").addClass("hidden");
               $("#wscores").addClass("hidden");
               $("#wagain").addClass("hidden");
-              
+
               $("#winterval").html("<h4>Too many players connected!</h4>");
-              
+
               $("#wstart").removeClass("hidden");
               $("#winterval").removeClass("hidden");
           }
-        };
-        socket.onclose = function(){
+      });
+        socket.on('disconnect', function(){
           socket = null;
-          
+
           $("#wgame").addClass("hidden");
           $("#wscores").addClass("hidden");
           $("#wagain").addClass("hidden");
-          
+
           $("#user-score").html(0);
           $("#other-score").html(0);
           $("#winterval").html("<h4>You've been disconnected...</h4>");
-          
+
           $("#wstart").removeClass("hidden");
           $("#winterval").removeClass("hidden");
-        };
+      });
 
         sendServer(socket, {
           action: actions.PLAY
         });
-      };
+    });
   }
 
   $("#wstart button").click(function(){
@@ -120,7 +117,7 @@ $(document).ready(function(){
       else
         connectServer();
   });
-  
+
   $("#wagain button").click(function() {
     $("#wagain").addClass("hidden");
     $("#winterval").html("<h4>Requesting next duel...</h4>");
@@ -134,7 +131,7 @@ $(document).ready(function(){
 
     if(socket)
       sendServer(socket, {value: val, action: actions.SELECT});
-      
+
     $("#wgame").addClass("hidden");
     $("#winterval").html("<h4>Awaiting other user's weapon choice...</h4>");
     $("#winterval").removeClass("hidden");
