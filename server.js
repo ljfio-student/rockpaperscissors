@@ -1,11 +1,11 @@
 // HTTP Server
 var fs = require('fs');
 var mo = require('mustache');
-var http = require("http");
+var http = require('http');
 var httpServer = http.createServer(httpHandler);
 var url = require('url');
 var server = require('socket.io')(httpServer);
-var async = require("async");
+var async = require('async');
 
 // Calculate size of an object
 Object.size = function(obj) {
@@ -19,27 +19,27 @@ Object.size = function(obj) {
 // Web server
 function httpHandler(req, res) {
   var uri = url.parse(req.url, true);
-  var data = "";
+  var data = '';
 
   var files = [
-    {path: "/", render: "static/index.html", type:"text/html"},
-    {path: "/main.js", file: "static/main.js", type: "text/javascript"},
+    {path: '/', render: 'static/index.html', type:'text/html'},
+    {path: '/main.js', file: 'static/main.js', type: 'text/javascript'},
 
-    {path: "/img/scissors.gif", file: "static/350x350.gif", type:"image/gif"},
-    {path: "/img/paper.gif", file: "static/350x350.gif", type:"image/gif"},
-    {path: "/img/stone.gif", file: "static/350x350.gif", type:"image/gif"}
+    {path: '/img/scissors.gif', file: 'static/350x350.gif', type:'image/gif'},
+    {path: '/img/paper.gif', file: 'static/350x350.gif', type:'image/gif'},
+    {path: '/img/stone.gif', file: 'static/350x350.gif', type:'image/gif'}
   ];
 
   // Get the data being sent to us
-  req.addListener("data", function(chunk){
+  req.addListener('data', function(chunk){
     data += chunk;
   });
 
-  req.addListener("end", function(){
+  req.addListener('end', function(){
     var args = {
-      type: "",
+      type: '',
       status: 500,
-      content: "",
+      content: '',
       set: false
     };
 
@@ -64,8 +64,8 @@ function httpHandler(req, res) {
 
     // If doesn't exist
     if(!args.set) {
-      args.type = "text/plain";
-      args.content = "Page does not exist";
+      args.type = 'text/plain';
+      args.content = 'Page does not exist';
       args.status = 404;
     }
 
@@ -132,7 +132,7 @@ server.on('connection', function (socket) {
   socket.id = -1;
 
   socket.on('message', function (data) {
-    if(typeof(data) == "string") {
+    if(typeof(data) == 'string') {
       var obj = JSON.parse(data);
 
       updates_in.push({
@@ -255,7 +255,7 @@ async.forever(function(callback){
               });
             }
 
-            console.log("game: " + JSON.stringify(games[g]));
+            console.log('game: ' + JSON.stringify(games[g]));
           } else {
             // Invalid choice
             break;
@@ -294,12 +294,12 @@ async.forever(function(callback){
         }
     }
 
-    console.log("in: " + JSON.stringify(u));
+    console.log('in: ' + JSON.stringify(u));
   }
 
   setTimeout(callback, 100);
 }, function(err){
-  console.log("in-err:" + err);
+  console.log('in-err:' + err);
 });
 
 // This sends data out to client
@@ -310,7 +310,7 @@ async.forever(function(callback){
     var sent = 0;
 
     // Make into an array
-    if(typeof u.to == "number")
+    if(typeof u.to == 'number')
       to.push(u.to)
     else if(u.to instanceof Array)
       to = u.to;
@@ -332,12 +332,12 @@ async.forever(function(callback){
       }
     }
 
-    console.log("out: " + JSON.stringify(u) + " - Sent: " + (sent == to.length ? "true" : "false"));
+    console.log('out: ' + JSON.stringify(u) + ' - Sent: ' + (sent == to.length ? 'true' : 'false'));
   }
 
   setTimeout(callback, 100);
 }, function(err){
-  console.log("out-err:" + err);
+  console.log('out-err:' + err);
 });
 
 // This checks for dead connections
@@ -363,13 +363,13 @@ async.forever(function(callback){
 
         if(user_disconnect) {
           if(!fs.exists('games.csv')) {
-            fs.writeFileSync('games.csv', "id,one,two,times\n");
+            fs.writeFileSync('games.csv', 'id,one,two,times\n');
           }
 
           fs.appendFileSync('games.csv',
-            games[g].id + "," +
-            games[g].s_one + "," +
-            games[g].s_two + "," +
+            games[g].id + ',' +
+            games[g].s_one + ',' +
+            games[g].s_two + ',' +
             games[g].times + '\n'
           );
 
@@ -390,7 +390,7 @@ async.forever(function(callback){
 
   setTimeout(callback, 100);
 }, function(err){
-  console.log("dead-err:" + err);
+  console.log('dead-err:' + err);
 });
 
-console.log("Server Started");
+console.log('Server Started');

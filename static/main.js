@@ -33,72 +33,72 @@ $(document).ready(function(){
 
           switch(obj.action) {
             case actions.IN_LOBBY:
-              $("#wstart").addClass("hidden");
-              $("#winterval").html("<h4>Waiting for other player...</h4>");
-              $("#winterval").removeClass("hidden");
+              $('#wstart').addClass('hidden');
+              $('#winterval').html('<h4>Waiting for other player...</h4>');
+              $('#winterval').removeClass('hidden');
               break;
             case actions.GAME_START:
-              if(!$("#wstart").hasClass("hidden"))
-                $("#wstart").addClass("hidden");
+              if(!$('#wstart').hasClass('hidden'))
+                $('#wstart').addClass('hidden');
 
-              $("#winterval").addClass("hidden");
-              $("#wgame").removeClass("hidden");
-              $("#wscores").removeClass("hidden");
+              $('#winterval').addClass('hidden');
+              $('#wgame').removeClass('hidden');
+              $('#wscores').removeClass('hidden');
               break;
             case actions.RESULT:
-              $("#wgame").addClass("hidden");
-              var r = "";
+              $('#wgame').addClass('hidden');
+              var r = '';
 
               if(obj.value.drawn)
-                r = "Drawn";
+                r = 'Drawn';
               else if(obj.value.won)
-                r = "Won";
+                r = 'Won';
               else if(obj.value.lost)
-                r = "Lost";
+                r = 'Lost';
 
-              $("#user-score").html(obj.value.scores.you);
-              $("#other-score").html(obj.value.scores.opp);
+              $('#user-score').html(obj.value.scores.you);
+              $('#other-score').html(obj.value.scores.opp);
 
-              $("#winterval").html("<h4>You have " + r + "</h4>");
-              $("#winterval").removeClass("hidden");
-              $("#wagain").removeClass("hidden");
+              $('#winterval').html('<h4>You have ' + r + '</h4>');
+              $('#winterval').removeClass('hidden');
+              $('#wagain').removeClass('hidden');
               break;
             case actions.DISCONNECT:
-              $("#wgame").addClass("hidden");
-              $("#wscores").addClass("hidden");
-              $("#wagain").addClass("hidden");
+              $('#wgame').addClass('hidden');
+              $('#wscores').addClass('hidden');
+              $('#wagain').addClass('hidden');
 
-              $("#user-score").html(0);
-              $("#other-score").html(0);
-              $("#winterval").html("<h4>Other user disconnected, fight abandoned!</h4>");
+              $('#user-score').html(0);
+              $('#other-score').html(0);
+              $('#winterval').html('<h4>Other user disconnected, fight abandoned!</h4>');
 
-              $("#wstart").removeClass("hidden");
-              $("#winterval").removeClass("hidden");
+              $('#wstart').removeClass('hidden');
+              $('#winterval').removeClass('hidden');
               break;
             case actions.MAX_USERS:
-              $("#wgame").addClass("hidden");
-              $("#wscores").addClass("hidden");
-              $("#wagain").addClass("hidden");
+              $('#wgame').addClass('hidden');
+              $('#wscores').addClass('hidden');
+              $('#wagain').addClass('hidden');
 
-              $("#winterval").html("<h4>Too many players connected!</h4>");
+              $('#winterval').html('<h4>Too many players connected!</h4>');
 
-              $("#wstart").removeClass("hidden");
-              $("#winterval").removeClass("hidden");
+              $('#wstart').removeClass('hidden');
+              $('#winterval').removeClass('hidden');
           }
       });
         socket.on('disconnect', function(){
           socket = null;
 
-          $("#wgame").addClass("hidden");
-          $("#wscores").addClass("hidden");
-          $("#wagain").addClass("hidden");
+          $('#wgame').addClass('hidden');
+          $('#wscores').addClass('hidden');
+          $('#wagain').addClass('hidden');
 
-          $("#user-score").html(0);
-          $("#other-score").html(0);
-          $("#winterval").html("<h4>You've been disconnected...</h4>");
+          $('#user-score').html(0);
+          $('#other-score').html(0);
+          $('#winterval').html('<h4>You\'ve been disconnected...</h4>');
 
-          $("#wstart").removeClass("hidden");
-          $("#winterval").removeClass("hidden");
+          $('#wstart').removeClass('hidden');
+          $('#winterval').removeClass('hidden');
       });
 
         sendServer(socket, {
@@ -107,9 +107,9 @@ $(document).ready(function(){
     });
   }
 
-  $("#wstart button").click(function(){
-      $("#winterval").html("Connecting...");
-      $("#wstart").addClass("hidden");
+  $('#wstart button').click(function(){
+      $('#winterval').html('Connecting...');
+      $('#wstart').addClass('hidden');
       if(socket)
         sendServer(socket, {
           action: actions.PLAY
@@ -118,22 +118,22 @@ $(document).ready(function(){
         connectServer();
   });
 
-  $("#wagain button").click(function() {
-    $("#wagain").addClass("hidden");
-    $("#winterval").html("<h4>Requesting next duel...</h4>");
+  $('#wagain button').click(function() {
+    $('#wagain').addClass('hidden');
+    $('#winterval').html('<h4>Requesting next duel...</h4>');
     sendServer(socket, {
       action: actions.PLAY_AGAIN
     });
   });
 
-  $("#wselect button").click(function(){
+  $('#wselect button').click(function(){
     var val = $(this).data('val');
 
     if(socket)
       sendServer(socket, {value: val, action: actions.SELECT});
 
-    $("#wgame").addClass("hidden");
-    $("#winterval").html("<h4>Awaiting other user's weapon choice...</h4>");
-    $("#winterval").removeClass("hidden");
+    $('#wgame').addClass('hidden');
+    $('#winterval').html('<h4>Awaiting other user\'s weapon choice...</h4>');
+    $('#winterval').removeClass('hidden');
   });
 });
