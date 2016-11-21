@@ -1,12 +1,3 @@
-// HTTP Server
-var fs = require('fs');
-var mo = require('mustache');
-var http = require('http');
-var httpServer = http.createServer(httpHandler);
-var url = require('url');
-var server = require('socket.io')(httpServer);
-var async = require('async');
-
 // Calculate size of an object
 Object.size = function(obj) {
     var size = 0, key;
@@ -16,67 +7,25 @@ Object.size = function(obj) {
     return size;
 };
 
-// Web server
-function httpHandler(req, res) {
-  var uri = url.parse(req.url, true);
-  var data = '';
+// Express
+var express = require('express');
+var app = express();
 
-  var files = [
-    {path: '/', render: 'static/index.html', type:'text/html'},
-    {path: '/main.js', file: 'static/main.js', type: 'text/javascript'},
+// HTTP server
+var server = require('http').Server(app);
+var io = require('socket.io')(server);
 
-    {path: '/img/scissors.gif', file: 'static/350x350.gif', type:'image/gif'},
-    {path: '/img/paper.gif', file: 'static/350x350.gif', type:'image/gif'},
-    {path: '/img/stone.gif', file: 'static/350x350.gif', type:'image/gif'}
-  ];
+server.listen(process.env.OPENSHIFT_NODEJS_PORT || 3000, process.env.OPENSHIFT_NODEJS_IP || '127.0.0.1');
 
-  // Get the data being sent to us
-  req.addListener('data', function(chunk){
-    data += chunk;
-  });
+app.get('/', function (req, res) {
+  res.sendfile(__dirname + '/static/index.html');
+});
 
-  req.addListener('end', function(){
-    var args = {
-      type: '',
-      status: 500,
-      content: '',
-      set: false
-    };
+app.use(express.static('static'));
 
-    for(var i = 0; i < files.length; i++) {
-      if(files[i].path == uri.pathname) {
-        var a = {
-          port: process.env.PORT
-        };
-
-        args.type = files[i].type;
-        if(files[i].render)
-          args.content = mo.render(fs.readFileSync(files[i].render, 'utf8'), a);
-        else
-          args.content = fs.readFileSync(files[i].file);
-
-        args.status = 200;
-        args.set = true;
-
-        break;
-      }
-    }
-
-    // If doesn't exist
-    if(!args.set) {
-      args.type = 'text/plain';
-      args.content = 'Page does not exist';
-      args.status = 404;
-    }
-
-    // Send response
-    res.writeHead(args.status, { 'Content-Type': args.type});
-    res.write(args.content);
-    res.end();
-  });
-}
-
-httpServer.listen(process.env.OPENSHIFT_NODEJS_PORT || 3000, process.env.OPENSHIFT_NODEJS_IP || '127.0.0.1');
+app.use(function (req, res, next) {
+  res.status(404).send('Page does not exist');
+});
 
 // Game server
 var games = [];
@@ -128,7 +77,7 @@ function checkWinner(one, two) {
 }
 
 // Initialise the server
-server.on('connection', function (socket) {
+io.on('connection', function (socket) {
   socket.id = -1;
 
   socket.on('message', function (data) {
@@ -165,6 +114,8 @@ server.on('connection', function (socket) {
 
   socket.old_id = socket.id;
 });
+
+var async = require('async');
 
 // Check for updates
 async.forever(function(callback){
