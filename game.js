@@ -8,178 +8,189 @@ var weapons = {
   STONE: 3
 };
 
-function Game(id, first, second) {
-  this.id = id;
-  var times = 0;
-  var self = this;
+class Game {
+  constructor(id, first, second) {
+    this.id = id;
 
-  // Handle sockets joining a game
-  first.join(this);
-  second.join(this);
+    this._times = 0;
 
-  server.to(id).emit('game_start');
+    this._first = first;
+    this._second = second;
 
-  this.is_active = function() {
-    return first.is_active() && second.is_active();
-  };
+    // Handle sockets joining a game
+    first.join(this);
+    second.join(this);
 
-  this.end = function() {
-    if (first.is_active()) {
-      first.leave(id);
+    server.to(id).emit('game_start');
+  }
+
+  get active() {
+    return this._first.active && this._second.active;
+  }
+
+  end() {
+    if (this._first.active) {
+      this._first.leave(this.id);
     }
 
-    if (second.is_active()) {
-      second.leave(id);
+    if (this._second.active) {
+      this._second.leave(this.id);
     }
-  };
+  }
 
-  this.is_draw = function() {
-    return first.get_choice() === second.get_choice();
-  };
+  is_draw() {
+    return this._first.choice === this._second.choice;
+  }
 
-  this.is_one_winner = function() {
-    var one = first.get_choice();
-    var two = second.get_choice();
+  is_one_winner() {
+    var one = this._first.choice;
+    var two = this._second.choice;
 
     return (one == weapons.SCISSORS && two == weapons.PAPER) ||
       (one == weapons.STONE && two == weapons.SCISSORS) ||
       (one == weapons.PAPER && two == weapons.STONE);
   }
 
-  this.check = function() {
-    if (first.get_choice() !== null && second.get_choice() !== null) {
-      times++;
+  check() {
+    if (this._first.choice !== null && this._second.choice !== null) {
+      this._times++;
 
-      var first_score = first.get_score();
-      var second_score = second.get_score();
+      var first_score = this._first.score;
+      var second_score = this._second.score;
 
-      if (self.is_draw()) {
-        first.draw();
-        second.draw();
-      } else if (self.is_one_winner()) {
-        first.win();
-        second.lose();
+      if (this.is_draw()) {
+        this._first.draw();
+        this._second.draw();
+      } else if (this.is_one_winner()) {
+        this._first.win();
+        this._second.lose();
       } else {
-        first.lose();
-        second.win();
+        this._first.lose();
+        this._second.win();
       }
     }
   }
 
-  this.get_scores = function(player) {
-    if (player == first) {
+  scores_for(player) {
+    if (player == this._first) {
       return {
-        you: first.get_score(),
-        opp: second.get_score()
+        you: this._first.score,
+        opp: this._second.score
       };
-    } else if (player == second) {
+    } else if (player == this._second) {
       return {
-        you: second.get_score(),
-        opp: first.get_score()
+        you: this._second.score,
+        opp: this._first.score
       };
-    } else {
-      return {
-        first: first.get_score(),
-        second: second.get_score()
-      }
     }
   }
 
-  this.reset = function() {
-    if(first.get_choice() === null && second.get_choice() === null) {
-      server.to(id).emit('game_start');
+  get scores() {
+    return {
+      first: this._first.score,
+      second: this._second.score
     }
   }
-};
 
-function Player(socket) {
-  var active = true;
-  var game = null;
-  var choice = null;
-  var score = 0;
-
-  var self = this;
-
-  socket.on('disconnect', function() {
-    active = false;
-
-    if (game !== null) {
-      game.end();
+  reset() {
+    if(this._first.choice === null && this._second.choice === null) {
+      server.to(this.id).emit('game_start');
     }
-  });
+  }
+}
 
-  socket.on('start', function() {
-    waiting.push(self);
-    socket.join('waiting');
+class Player {
+  constructor(socket) {
+    this._socket = socket;
 
-    socket.emit('in_lobby');
-  });
+    this._active = true;
+
+    this._game = null;
+    this._choice = null;
+
+    this._score = 0;
+
+    socket.on('disconnect', () => this._disconnect());
+    socket.on('choice', (data) => this._make_choice(data));
+    socket.on('start', () => this._start());
+    socket.on('play_again', () => this._play_again());
+  }
+
+  _disconnect() {
+    this._active = false;
+
+    if (this._game !== null) {
+      this._game.end();
+    }
+  }
+
+  _start() {
+    waiting.push(this);
+
+    this._socket.join('waiting');
+
+    this._socket.emit('in_lobby');
+  }
 
   // TODO: Handle usernames?
 
   // TODO: Handle chat messages?
 
-  socket.on('choice', function(data) {
-    choice = data.option;
+  _make_choice(data) {
+    this._choice = data.option;
 
-    game.check();
-  });
-
-  socket.on('play_again', function() {
-    choice = null;
-
-    game.reset();
-  })
-
-  this.join = function(new_game) {
-    game = new_game;
-
-    socket.leave('waiting');
-    socket.join(game.id);
-  };
-
-  this.is_active = function() {
-    return active;
-  };
-
-  this.leave = function(id) {
-    socket.emit('abandon');
-
-    socket.leave(id);
-    socket.join('waiting');
-
-    game = null;
-    choice = null;
+    this._game.check();
   }
 
-  this.get_choice = function() {
-    return choice;
+  _play_again() {
+    this._choice = null;
+
+    this._game.reset();
   }
 
-  this.get_score = function() {
-    return score;
+  join(new_game) {
+    this._game = new_game;
+
+    this._socket.leave('waiting');
+    this._socket.join(this._game.id);
   }
 
-  this.draw = function() {
-    socket.emit('result', {
+  leave(id) {
+    this._socket.emit('abandon');
+
+    this._socket.leave(id);
+    this._socket.join('waiting');
+
+    this._game = null;
+    this._choice = null;
+  }
+
+  get active() { return this._active; }
+
+  get choice() { return this._choice; }
+
+  get score() { return this._score; }
+
+  draw() {
+    this._socket.emit('result', {
       drawn: true,
-      scores: game.get_scores(this)
+      scores: this._game.scores_for(this)
     });
   }
 
-  this.win = function() {
-    score++;
+  win() {
+    this._score++;
 
-    socket.emit('result', {
+    this._socket.emit('result', {
       won: true,
-      scores: game.get_scores(this)
+      scores: this._game.scores_for(this)
     });
   }
 
-  this.lose = function() {
-    socket.emit('result', {
+  lose() {
+    this._socket.emit('result', {
       lost: true,
-      scores: game.get_scores(this)
+      scores: this._game.scores_for(this)
     });
   }
 }
@@ -206,14 +217,12 @@ async.forever(function(callback) {
 });
 
 var clear_games = function(game, callback) {
-  var is_active = game.is_active();
+  var is_active = game.active;
 
   if (!is_active) {
     game.end();
 
-    var scores = game.get_scores();
-
-    console.log(util.format('game: %s - score: %s vs %s', game.id, scores.first, scores.second));
+    console.log(util.format('game: %s - score: %s vs %s', game.id, game.scores.first, game.scores.second));
   }
 
   callback(null, !is_active);
@@ -235,7 +244,7 @@ module.exports = function(io) {
   io.on('connection', function(socket) {
     var player = new Player(socket);
 
-    players.push(player);
+    // players.push(player);
   });
 
   server = io;
