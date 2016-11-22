@@ -23,7 +23,7 @@ app.use(function (req, res, next) {
   res.status(404).send('Page does not exist');
 });
 
-game.bind(io);
+game(io);
 
 server.listen(port, ip);
 

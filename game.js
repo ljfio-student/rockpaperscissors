@@ -1,320 +1,243 @@
 var async = require('async');
+var guid = require('guid');
+var util = require('util');
 
-// Game server
-var games = [];
-var games_count = 0;
-var lobby = [];
-
-// Async updates
-var updates_in = [];
-var updates_out = [];
-
-// Users
-var users = [];
-var user_space = [];
-var user_games = 50;
-var user_count = 0;
-var user_limit = user_games * 2;
-
-// Actions
-var actions = {
-  PLAY: 0,
-  SELECT: 1,
-  MAX_USERS: 2,
-  RESULT: 3,
-  GAME_START: 4,
-  IN_LOBBY: 5,
-  PLAY_AGAIN: 6,
-  DISCONNECT: 7
-};
 var weapons = {
   PAPER: 1,
   SCISSORS: 2,
   STONE: 3
 };
 
-// Solves poor serializing
-function sendClient(socket, obj){
-  socket.send(JSON.stringify(obj));
-}
+function Game(id, first, second) {
+  this.id = id;
+  var times = 0;
+  var self = this;
 
-// Game check winner
-function checkWinner(one, two) {
-  if(one == two) {
-    return 0;
-  } else if((one == weapons.SCISSORS && two == weapons.PAPER) || (one == weapons.STONE && two == weapons.SCISSORS) || (one == weapons.PAPER && two == weapons.STONE)) {
-    return 1;
-  } else {
-    return 2;
-  }
-}
+  // Handle sockets joining a game
+  first.join(this);
+  second.join(this);
 
-// Initialise the server
-function onConnect(socket) {
-  socket.id = -1;
+  server.to(id).emit('game_start');
 
-  socket.on('message', function (data) {
-    if(typeof(data) == 'string') {
-      var obj = JSON.parse(data);
+  this.is_active = function() {
+    return first.is_active() && second.is_active();
+  };
 
-      updates_in.push({
-        id: socket.id,
-        action: obj.action,
-        value: obj.value
-      });
+  this.end = function() {
+    if (first.is_active()) {
+      first.leave(id);
     }
-  });
 
-  socket.on('close', function () {
-    socket.id = -2;
-  });
+    if (second.is_active()) {
+      second.leave(id);
+    }
+  };
 
-  if(user_space.length > 0) {
-    socket.id = user_space.pop();
-  } else if(users.length < user_limit) {
-    socket.id = user_count;
-    user_count++;
-  } else {
-    sendClient(socket, {
-      action: actions.MAX_USERS
-    });
-    socket.close();
+  this.is_draw = function() {
+    return first.get_choice() === second.get_choice();
+  };
+
+  this.is_one_winner = function() {
+    var one = first.get_choice();
+    var two = second.get_choice();
+
+    return (one == weapons.SCISSORS && two == weapons.PAPER) ||
+      (one == weapons.STONE && two == weapons.SCISSORS) ||
+      (one == weapons.PAPER && two == weapons.STONE);
   }
 
-  if(socket.id >= 0) {
-    users.push(socket);
+  this.check = function() {
+    if (first.get_choice() !== null && second.get_choice() !== null) {
+      times++;
+
+      var first_score = first.get_score();
+      var second_score = second.get_score();
+
+      if (self.is_draw()) {
+        first.draw();
+        second.draw();
+      } else if (self.is_one_winner()) {
+        first.win();
+        second.lose();
+      } else {
+        first.lose();
+        second.win();
+      }
+    }
   }
 
-  socket.old_id = socket.id;
-}
+  this.get_scores = function(player) {
+    if (player == first) {
+      return {
+        you: first.get_score(),
+        opp: second.get_score()
+      };
+    } else if (player == second) {
+      return {
+        you: second.get_score(),
+        opp: first.get_score()
+      };
+    } else {
+      return {
+        first: first.get_score(),
+        second: second.get_score()
+      }
+    }
+  }
 
-module.exports.bind = function(io) {
-  io.on('connection', onConnect);
+  this.reset = function() {
+    if(first.get_choice() === null && second.get_choice() === null) {
+      server.to(id).emit('game_start');
+    }
+  }
 };
 
-// Check for updates
-async.forever(function(callback){
-  while(updates_in.length > 0) {
-    var u = updates_in.pop();
+function Player(socket) {
+  var active = true;
+  var game = null;
+  var choice = null;
+  var score = 0;
 
-    switch(u.action) {
-      case actions.PLAY:
-        if(lobby.length > 0) {
-          var opp = lobby.pop();
+  var self = this;
 
-          games.push({
-            id: games_count,
-            one: opp,
-            two: u.id,
-            s_one: 0, // Scores
-            s_two: 0,
-            c_one: 0, // Choices
-            c_two: 0,
-            r_one: false, // Ready to play
-            r_two: false,
-            times: 0
-          });
-          games_count++;
+  socket.on('disconnect', function() {
+    active = false;
 
-          updates_out.push({
-            to: [opp, u.id],
-            action: actions.GAME_START
-          });
-        } else {
-          lobby.push(u.id);
-          updates_out.push({
-            to: u.id,
-            action: actions.IN_LOBBY
-          });
-        }
-        break;
-      case actions.SELECT:
-        for(var g in games){
-          if(u.value > 0 && u.value < (Object.size(weapons) + 1)) {
-            if(games[g].one == u.id){
-              games[g].c_one = u.value;
-            } else if(games[g].two == u.id) {
-              games[g].c_two = u.value;
-            }
-
-            // Time to compare choices
-            if(games[g].c_one !== 0 && games[g].c_two !== 0) {
-              var r = checkWinner(games[g].c_one, games[g].c_two);
-
-              // Reset and update stats
-              if(r == 1){
-                games[g].s_one++;
-              } else if(r == 2) {
-                games[g].s_two++;
-              }
-
-              games[g].c_one = 0;
-              games[g].c_two = 0;
-              games[g].times++;
-
-              // Push result to clients
-              updates_out.push({
-                to: games[g].one,
-                action: actions.RESULT,
-                value:{
-                  won: r == 1,
-                  drawn: r === 0,
-                  lost: r == 2,
-                  scores: {
-                    you: games[g].s_one,
-                    opp: games[g].s_two
-                  }
-                }
-              });
-              updates_out.push({
-                to: games[g].two,
-                action: actions.RESULT,
-                value: {
-                  won: r == 2,
-                  drawn: r === 0,
-                  lost: r == 1,
-                  scores: {
-                    you: games[g].s_two,
-                    opp: games[g].s_one
-                  }
-                }
-              });
-            }
-
-            console.log('game: ' + JSON.stringify(games[g]));
-          } else {
-            // Invalid choice
-            break;
-          }
-        }
-        break;
-      case actions.PLAY_AGAIN:
-        for(var g in games){
-          var game_up = false;
-
-          if(games[g].one == u.id) {
-            games[g].r_one = true;
-            game_up = true;
-          } else if(games[g].two == u.id) {
-            games[g].r_two = true;
-            game_up = true;
-          }
-
-          if(game_up) {
-            if(games[g].r_one && games[g].r_two) {
-              updates_out.push({
-                to: [games[g].one, games[g].two],
-                action: actions.GAME_START
-              });
-
-              // Reset ready state
-              games[g].r_one = false;
-              games[g].r_two = false;
-            } else {
-              updates_out.push({
-                to: u.id,
-                action: actions.IN_LOBBY
-              });
-            }
-          }
-        }
+    if (game !== null) {
+      game.end();
     }
+  });
 
-    console.log('in: ' + JSON.stringify(u));
+  socket.on('start', function() {
+    waiting.push(self);
+    socket.join('waiting');
+
+    socket.emit('in_lobby');
+  });
+
+  // TODO: Handle usernames?
+
+  // TODO: Handle chat messages?
+
+  socket.on('choice', function(data) {
+    choice = data.option;
+
+    game.check();
+  });
+
+  socket.on('play_again', function() {
+    choice = null;
+
+    game.reset();
+  })
+
+  this.join = function(new_game) {
+    game = new_game;
+
+    socket.leave('waiting');
+    socket.join(game.id);
+  };
+
+  this.is_active = function() {
+    return active;
+  };
+
+  this.leave = function(id) {
+    socket.emit('abandon');
+
+    socket.leave(id);
+    socket.join('waiting');
+
+    game = null;
   }
 
-  setTimeout(callback, 100);
-}, function(err){
-  console.log('in-err:' + err);
-});
-
-// This sends data out to client
-async.forever(function(callback){
-  while(updates_out.length > 0){
-    var u = updates_out.pop();
-    var to = [];
-    var sent = 0;
-
-    // Make into an array
-    if(typeof u.to == 'number')
-      to.push(u.to)
-    else if(u.to instanceof Array)
-      to = u.to;
-
-    // Loop through the 'to' list
-    for(var x in to) {
-      var t = to[x];
-
-      for(var a in users) {
-        if(users[a].id == t) {
-          sendClient(users[a], {
-            action: u.action,
-            value: u.value
-          });
-          sent++;
-
-          break;
-        }
-      }
-    }
-
-    console.log('out: ' + JSON.stringify(u) + ' - Sent: ' + (sent == to.length ? 'true' : 'false'));
+  this.get_choice = function() {
+    return choice;
   }
 
-  setTimeout(callback, 100);
-}, function(err){
-  console.log('out-err:' + err);
-});
-
-// This checks for dead connections
-async.forever(function(callback){
-  for(var x in users) {
-    if(users[x].id == -2) {
-      for(var g in games){
-        var user_disconnect = false;
-
-        if(games[g].one == users[x].old_id) {
-          updates_out.push({
-            to: games[g].two,
-            action: actions.DISCONNECT
-          });
-          user_disconnect = true;
-        } else if(games[g].two == users[x].old_id) {
-          updates_out.push({
-            to: games[g].one,
-            action: actions.DISCONNECT
-          });
-          user_disconnect = true;
-        }
-
-        if(user_disconnect) {
-          if(!fs.exists('games.csv')) {
-            fs.writeFileSync('games.csv', 'id,one,two,times\n');
-          }
-
-          fs.appendFileSync('games.csv',
-            games[g].id + ',' +
-            games[g].s_one + ',' +
-            games[g].s_two + ',' +
-            games[g].times + '\n'
-          );
-
-          games.splice(g, 1);
-        }
-      }
-
-      for(var l in lobby) {
-        if(users[x].old_id == lobby[l]) {
-          lobby.splice(l, 1);
-        }
-      }
-
-      user_space.push(users[x].old_id);
-      users.splice(x, 1);
-    }
+  this.get_score = function() {
+    return score;
   }
 
-  setTimeout(callback, 100);
-}, function(err){
-  console.log('dead-err:' + err);
+  this.draw = function() {
+    socket.emit('result', {
+      drawn: true,
+      scores: game.get_scores(this)
+    });
+  }
+
+  this.win = function() {
+    score++;
+
+    socket.emit('result', {
+      won: true,
+      scores: game.get_scores(this)
+    });
+  }
+
+  this.lose = function() {
+    socket.emit('result', {
+      lost: true,
+      scores: game.get_scores(this)
+    });
+  }
+}
+
+var games = []; // In a game
+var players = []; // Not wanting to play
+var waiting = []; // Waiting to join a game
+
+var server = null;
+
+async.forever(function(callback) {
+  if (waiting.length > 1) {
+    var id = guid.create();
+
+    var first = waiting.pop();
+    var second = waiting.pop();
+
+    var game = new Game(id, first, second);
+
+    games.push(game);
+  }
+
+  setTimeout(callback, 1000);
 });
+
+var clear_games = function(game, callback) {
+  var is_active = game.is_active();
+
+  if (!is_active) {
+    game.end();
+
+    var scores = game.get_scores();
+
+    console.log(util.format('game: %s - score: %s vs %s', game.id, scores.first, scores.second));
+  }
+
+  callback(null, !is_active);
+};
+
+async.forever(function(callback) {
+  async.filter(games, clear_games, function(err, results) {
+    if (!err) {
+      for (var r in results) {
+        games.splice(games.indexOf(results[r]), 1);
+      }
+    }
+  });
+
+  setTimeout(callback, 5000);
+});
+
+module.exports = function(io) {
+  io.on('connection', function(socket) {
+    var player = new Player(socket);
+
+    players.push(player);
+  });
+
+  server = io;
+
+  console.log('Game bound');
+};
