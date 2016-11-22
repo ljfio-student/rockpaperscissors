@@ -14,7 +14,7 @@ var port = process.env.OPENSHIFT_NODEJS_PORT || 3000;
 var ip = process.env.OPENSHIFT_NODEJS_IP || '127.0.0.1';
 
 app.get('/', function (req, res) {
-  res.sendfile(__dirname + '/static/index.html');
+  res.sendFile(__dirname + '/static/index.html');
 });
 
 app.use(express.static('static'));
