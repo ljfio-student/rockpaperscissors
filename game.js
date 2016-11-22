@@ -149,6 +149,7 @@ function Player(socket) {
     socket.join('waiting');
 
     game = null;
+    choice = null;
   }
 
   this.get_choice = function() {
